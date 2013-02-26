@@ -67,6 +67,7 @@ class TweetuosoCommands(cmd.Cmd):
 		try:
 			api = auth_()
 			tl = api.home_timeline()
+			tl.reverse()
 			for tweet in tl:
 				print("   @" + Fore.RED + tweet.user.screen_name.encode('utf-8')
 						+ Fore.RESET +
@@ -223,7 +224,7 @@ class TweetuosoCommands(cmd.Cmd):
 		except tw.TweepError as error:
 			os.system('clear')
 			print(Fore.RED + ">> " + Fore.RESET + "Error occured: %s" % error)
-			
+
 	def do_followback(self, line):
 		""" Followback all your followers. """
 		""" May be limited due to API rate limits. """
@@ -236,7 +237,7 @@ class TweetuosoCommands(cmd.Cmd):
 			print (Fore.RED + ">> " + Fore.RESET + "Working. This may take a while...")
 			for u in follow:
 				u.follow()
-				print (Fore.RED + ">> " + Fore.RESET + 
+				print (Fore.RED + ">> " + Fore.RESET +
 					"You successfully followed back all of your followers.")
 		except tw.TweepError as error:
 			os.system('clear')
