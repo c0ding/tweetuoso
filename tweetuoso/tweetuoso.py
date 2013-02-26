@@ -6,9 +6,14 @@ import re
 import sys
 import cmd
 import requests
+import ConfigParser
 import tweepy as tw
-from auth import keys
+from collections import namedtuple
+#from auth import keys
 from colorama import Fore, Style
+
+CONFIG = ConfigParser.ConfigParser()
+CONFIG_PATH = "./config"
 
 
 def banner ():
@@ -30,10 +35,18 @@ def banner ():
 ####################################################################\n""" +
 		Fore.RESET)
 
+def read_config():
+	CONFIG.read(CONFIG_PATH)
+
 def auth():
 	print "Getting authorization url..."
 	try:
-		auth = tw.OAuthHandler(keys['consumer_key'], keys['consumer_secret'])
+		try:
+			auth = tw.OAuthHandler(CONFIG.get('auth', 'consumer_key'),
+								CONFIG.get('auth', 'consumer_secret'))
+		except:
+			print(Fore.RED + ">> Missing consumer secret and/or key" + Fore.RESET)
+			sys.exit(0)
 		try:
 			url = auth.get_authorization_url()
 
@@ -44,17 +57,19 @@ def auth():
 		print(Fore.RED + ">> " + Fore.RESET + "Please visit this url to get your access keys: \n" + url)
 		pin = raw_input(Fore.RED + ">> " + Fore.RESET + "PIN: ").strip()
 		auth.get_access_token(pin)
-		print(Fore.RED + ">> " + Fore.RESET + "Add the following keys into the auth.py file :\n")
-		print(Fore.RED + ">> " + Fore.RESET + "access_token = '%s'" % auth.access_token.key)
-		print(Fore.RED + ">> " + Fore.RESET + "access_secret = '%s'" % auth.access_token.secret)
-
+		CONFIG.set('auth', 'access_token', auth.access_token.key)
+		CONFIG.set('auth', 'access_secret', auth.access_token.secret)
+		with open(CONFIG_PATH, 'w') as config_fh:
+			CONFIG.write(config_fh)
 	except KeyboardInterrupt:
 		print "\nAborted"
 
 def auth_():
 	""" Function doc """
-	auth = tw.OAuthHandler(keys['consumer_key'], keys['consumer_secret'])
-	auth.set_access_token(keys['access_token'], keys['access_secret'])
+	auth = tw.OAuthHandler(CONFIG.get('auth', 'consumer_key'),
+							CONFIG.get('auth', 'consumer_secret'))
+	auth.set_access_token(CONFIG.get('auth', 'access_token'),
+							CONFIG.get('auth', 'access_secret'))
 	api = tw.API(auth)
 	return api
 
@@ -72,7 +87,7 @@ class TweetuosoCommands(cmd.Cmd):
 						+ Fore.RESET +
 						tweet.created_at.strftime(
 							Style.DIM +' tweeted on %d/%m/%Y at %H:%M\n' +
-							Style.RESET_ALL) + "      " + tweet.text.encode('utf-8'))
+							Style.RESET_ALL) + "	  " + tweet.text.encode('utf-8'))
 		except KeyboardInterrupt:
 			print "\nAborted"
 		except tw.TweepError as error:
@@ -89,7 +104,7 @@ class TweetuosoCommands(cmd.Cmd):
 						+ Fore.RESET +
 						tweet.created_at.strftime(
 							Style.DIM +' tweeted you on %d/%m/%Y at %H:%M\n' +
-							Style.RESET_ALL) + "      " + tweet.text.encode('utf-8'))
+							Style.RESET_ALL) + "	  " + tweet.text.encode('utf-8'))
 		except KeyboardInterrupt:
 			print "\nAborted"
 		except tw.TweepError as error:
@@ -162,12 +177,12 @@ class TweetuosoCommands(cmd.Cmd):
 			api = auth_()
 			user = api.me()
 			print("   @"+ Fore.RED + user.screen_name + Fore.RESET + " (" +
-				Style.DIM + user.name + Style.RESET_ALL + ")\n      " +
-				user.description + "\n      " + "Following: " +
+				Style.DIM + user.name + Style.RESET_ALL + ")\n		" +
+				user.description + "\n		" + "Following: " +
 				str(user.friends_count) + " || Followers: " +
 				str(user.followers_count) + " || Tweets: " +
 				str(user.statuses_count) + "|| Listed: " +
-				str(user.listed_count) + "\n      " +
+				str(user.listed_count) + "\n	  " +
 				user.location + " || " + user.url)
 		except KeyboardInterrupt:
 			print "\nAborted"
@@ -185,7 +200,7 @@ class TweetuosoCommands(cmd.Cmd):
 						Fore.RESET +
 						tweet.created_at.strftime(Style.DIM +
 								' tweeted on %d/%m/%Y at %H:%M' + Style.RESET_ALL)
-						+ "      " + tweet.text.encode('utf-8'))
+						+ "		 " + tweet.text.encode('utf-8'))
 		except KeyboardInterrupt:
 			print "\nAborted"
 		except tw.TweepError as error:
@@ -217,13 +232,13 @@ class TweetuosoCommands(cmd.Cmd):
 					Fore.RESET +
 					tweet.created_at.strftime(Style.DIM +
 							   ' tweeted on %d/%m/%Y at %H:%M\n' + Style.RESET_ALL)
-					+ "      " + tweet.text.encode('utf-8'))
+					+ "		 " + tweet.text.encode('utf-8'))
 		except KeyboardInterrupt:
 			print "\nAborted"
 		except tw.TweepError as error:
 			os.system('clear')
 			print(Fore.RED + ">> " + Fore.RESET + "Error occured: %s" % error)
-			
+
 	def do_followback(self, line):
 		""" Followback all your followers. """
 		""" May be limited due to API rate limits. """
@@ -236,7 +251,7 @@ class TweetuosoCommands(cmd.Cmd):
 			print (Fore.RED + ">> " + Fore.RESET + "Working. This may take a while...")
 			for u in follow:
 				u.follow()
-				print (Fore.RED + ">> " + Fore.RESET + 
+				print (Fore.RED + ">> " + Fore.RESET +
 					"You successfully followed back all of your followers.")
 		except tw.TweepError as error:
 			os.system('clear')
@@ -249,21 +264,21 @@ class TweetuosoCommands(cmd.Cmd):
 
 	def do_help(self, line):
 		""" Show detailed help """
-		print "\n\033[31m   Commands:\n   _________________________________________________________________"
-		print "  +                                                                 +"
-		print "  +\ttimeline\t Show public timeline.                      +"
-		print "  +\tmentions\t Show tweets that mentioned you.            +"
-		print "  +\tstalk\t\t Show <user> timeline                       +"
-		print "  +\tpost\t\t Post new tweet.                            +"
-		print "  +\tdelete\t\t Delete tweet.                              +"
-		print "  +\tme\t\t Me (Get account info).                     +"
-		print "  +\tsearch\t\t Search for <query>.                        +"
-		print "  +\tfollow\t\t Follow a new user.                         +"
-		print "  +\tunfollow\t Unfollow a user.                           +"
-		print "  +\tfollowback\t Followback all your followers.             +"
-		print "  +\ttrends\t\t Show today's trends.                       +"
-		print "  +                                                                 +"
-		print "  +     Use 'quit' to leave.                                        +"
+		print "\n\033[31m	Commands:\n   _________________________________________________________________"
+		print "  +																   +"
+		print "  +\ttimeline\t Show public timeline.					  +"
+		print "  +\tmentions\t Show tweets that mentioned you.			  +"
+		print "  +\tstalk\t\t Show <user> timeline						 +"
+		print "  +\tpost\t\t Post new tweet.							+"
+		print "  +\tdelete\t\t Delete tweet.							  +"
+		print "  +\tme\t\t Me (Get account info).					  +"
+		print "  +\tsearch\t\t Search for <query>.						  +"
+		print "  +\tfollow\t\t Follow a new user.						  +"
+		print "  +\tunfollow\t Unfollow a user.							  +"
+		print "  +\tfollowback\t Followback all your followers.				+"
+		print "  +\ttrends\t\t Show today's trends.						  +"
+		print "  +																   +"
+		print "  +	   Use 'quit' to leave.										   +"
 		print "  +_________________________________________________________________+\033[0;0m"
 		print ""
 
@@ -275,7 +290,14 @@ def main():
 
 if __name__ == '__main__':
 	os.system('clear')
-	if keys['access_token'] == '' and keys['access_secret'] == '':
+	read_config()
+	if not CONFIG.has_section('auth'):
+		print(Fore.RED + "No auth settings in config file. "
+				"Please add consumer key and secret" + Fore.RESET)
+		sys.exit(0)
+
+	if (not CONFIG.has_option('auth', 'access_token') or
+		not CONFIG.has_option('auth', 'access_secret')):
 		auth()
 	else:
 		main()
