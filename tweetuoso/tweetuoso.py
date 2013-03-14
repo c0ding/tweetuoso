@@ -70,12 +70,12 @@ def auth_():
 class TweetuosoCommands(cmd.Cmd):
 
 	prompt = Fore.RED + ">> " + Fore.RESET
-	
+
 	def emptyline(self):
 	    pass
-	
+
 	def default(self, inp):
-		print "'" + inp + "'" + " is not a valid command. Try using 'help'." 
+		print "'" + inp + "'" + " is not a valid command. Try using 'help'."
 
 	def do_timeline(self, line):
 		""" Show current timeline. """
@@ -106,7 +106,9 @@ class TweetuosoCommands(cmd.Cmd):
 		""" Show tweets in which you were mentioned. """
 		try:
 			api = auth_()
-			mt = api.mentions()
+			mt = api.mentions_timeline()
+			if settings['reversed_timeline'] == True:
+				mt.reverse()
 			for tweet in mt:
 				tweet.text = tweet.text.replace("\n", " ")
 				print("   @" + Fore.RED + tweet.user.screen_name.encode('utf-8')
@@ -238,11 +240,11 @@ class TweetuosoCommands(cmd.Cmd):
 				prompt_print ("You successfully followed back all of your followers.")
 		except tw.TweepError as error:
 			prompt_print("Error occured: %s" % error)
-		
+
 	def do_quit(self, line):
 		os.system("clear")
 		sys.exit(0)
-		
+
 	def do_exit(self, line):
 		os.system("clear")
 		sys.exit(0)
